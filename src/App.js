@@ -5,14 +5,18 @@ import { logDOM } from '@testing-library/react';
 import React from 'react';
 import axios from 'axios';
 import Grid from '@mui/material/Grid';
+import ReactCountryFlag from "react-country-flag"
+import commaNumber from 'comma-number'
+import downloadComponentInPDF from './savePDF'
+import Pdf from "react-to-pdf";
 function App() {
-  const [feed, setFeed] = useState([])
+  const [feed, setFeed] = useState({})
+  const ref = React.createRef();
+  const inboLink = 'https://www.inbocoffee.com/products/'
   useEffect(() => {
     getFeed()
     // getProduct()
   }, [])
-
-  const pickArray = [0, 2, 17, 28, 35]
 
   const getFeed = async () => {
     // setIsLoading(true)
@@ -23,84 +27,204 @@ function App() {
         }
       })
       .then(data => {
-        console.log(data.data.values);
+        // console.log(data.data.values);
         // debugger
         let arr = []
-        let arrTemp1 = []
-        let arrTemp2 = []
         const result = data.data.values
-        pickArray.map((item) => {
-          result[0].map((resultItem, index) => {
-            let arrTemp = []
-            // debugger
-            console.log({ resultItem, index, item });
+        result.map((firstLevel) => {
+          // index === item &&
+          // console.log(firstLevel);
+          // debugger
+          let obj = {
+            id: null,
+            name_zh: null,
+            name_eng: null,
+            country: null,
+            amount: null,
+            package: null,
+            price: null,
+            country_zh: null
+          }
+          if (firstLevel[2] && firstLevel[38]) {
+            firstLevel.map((resultItem, index) => {
+              // console.log(resultItem);
+              // pickArray.map((item) => {
+              //   if (index === item) {
+              //     arrTemp.push(resultItem)
+              //   }
+              // })
 
-            return index === item && arrTemp1.push(resultItem)
-          })
-          result[2].map((resultItem, index) => {
+              // debugger
+              switch (true) {
+                case index === 0:
+                  obj.id = resultItem
+                  break;
+                case index === 1:
+                  obj.name_eng = resultItem
+                  obj.country = resultItem.split(" ")[0]
+                  break;
+                case index === 2:
+                  obj.country_zh = resultItem.split(" ")[0]
+                  break;
+                case index === 6:
+                  obj.name_zh = resultItem
+                  break;
+                case index === 28:
+                  obj.amount = resultItem
+                  break;
+                case index === 35:
+                  obj.package = resultItem
+                  break;
+                case index === 38:
+                  obj.price = resultItem
+                  break;
+                default:
+                  break;
+              }
 
-            // debugger
-            console.log({ resultItem, index, item });
-
-            return index === item && arrTemp2.push(resultItem)
-          })
+            })
+          } else {
+            return
+          }
+          // arrTemp.push(obj)
+          arr.push(obj)
         })
-        arr.push(arrTemp1, arrTemp2)
-        console.log(arr);
+        let CountryCategory = {}
+        arr.slice(2).map(item => {
+          let countryName = item?.country
+          // debugger
+          let val = []
+          val.push(item)
+          if (CountryCategory[countryName]) {
+            CountryCategory[countryName].push(...val)
+          } else {
+            CountryCategory[countryName] = [...val]
+          }
+          // let stuff = {item?.country: item}
+          // console.log(item);
+          // CountryCategory.country = item?.country
+          // CountryCategory.country = item
+        })
+        // console.log(CountryCategory);
 
-        setFeed(arr)
+
+        // arr.push(arrTemp1, arrTemp2)
+        // console.log(arr);
+
+        setFeed(CountryCategory)
       })
       .catch(function (error) {
         console.log(error);
       });
   }
+
+  const getCountryCode = (str) => {
+    switch (str) {
+      case 'El':
+        return 'SV'
+      case 'Ethiopia':
+        return 'ET'
+      case 'Guatemala':
+        return 'GT'
+      case 'Papua':
+        return 'PG'
+      case 'Ecuador':
+        return 'EC'
+      case 'Rwanda':
+        return 'RW'
+      case 'Costa':
+        return 'CR'
+      default:
+        break;
+    }
+  }
+
+  const isVisible = (arr) => {
+    let result = 0
+    arr.map(item => {
+      // console.log(item);
+      parseInt(item?.amount) === 0 && result++
+    })
+    // debugger
+    return arr.length !== result
+  }
+
   return (
-    <Wrapper>
-      <h1>Inbo Feed</h1>
-      <Grid container spacing={4}>
-        {feed[0]?.map((item) => {
-          return (
-            <Grid item xs={8} md={4} lg={2}>
-              {item}
-            </Grid>
-          )
-        })}
+    <Wrapper ref={ref}>
+      {/* <h1>Inbo Feed</h1> */}
+      {/* {JSON.stringify(feed.slice(2))} */}
+      {/* {JSON.stringify(feed)} */}
+      {/* {renderData()} */}
+      <button
+        style={{
+          position: 'fixed',
+          right: 20,
+          top: 20
+        }}
+        onClick={() => {
+          let el = document.getElementById("root");
+          downloadComponentInPDF(el)
+        }}
+      >
+        下載豆單
+      </button>
+      {/* <Pdf targetRef={ref} filename="code-example.pdf">
+        {({ toPdf }) => <button onClick={toPdf}>Generate Pdf</button>}
+      </Pdf> */}
+      <Grid container >
+        {
+          Object.keys(feed).map((key, index) => {
+            if (isVisible(feed[key])) {
+              return (
+                <Grid key={key} item xs={12} lg={12}>
+                  <div key={index}>
+                    <div style={{ display: 'flex' }}>
+                      <ReactCountryFlag countryCode={getCountryCode(key)} style={{ fontSize: '64px', marginRight: '16px' }} />
+                      <h1>{feed[key][0].country_zh}</h1>
+                    </div>
+                    <Grid className="row" container spacing={2}>
+                      <Grid item xs={4}>
+                        <b>品項</b>
+                      </Grid>
+                      <Grid item xs={8} style={{textAlign:'right', paddingRight:'16px'}}>
+                        <b>價格(點選商品連結，價格內詳)</b>
+                      </Grid>
+                    </Grid>
+                    {feed[key]?.map(item => {
+                      if (item?.amount > 0) {
+                        return (
+                          <a href={inboLink + item?.id} key={item?.name_eng} target="_blank">
+                            <Grid key={item?.name_eng} className="row" container spacing={2}>
+                              <Grid item xs={9} >
+                                {item?.name_zh} <br />
+                                {item?.name_eng}
+                              </Grid>
+                              {/* <Grid item xs={6} md={4} lg={5}>
+                                {item?.amount}
+                              </Grid> */}
+                              <Grid item xs={3} style={{ textAlign: 'right' ,paddingRight:'16px'}}>
+                                {commaNumber(item?.price)}/KG
+                              </Grid>
+                            </Grid>
+                          </a>
+                        )
+                      } else {
+                        return
+                      }
+
+                    })}
+                    <hr style={{ margin: '60px 0 60px' }} />
+                  </div>
+                </Grid>
+              )
+            } else {
+              return
+            }
+          })
+        }
 
       </Grid>
-      <Grid container spacing={4}>
-        {feed[1]?.map((item) => {
-          return (
-            <Grid item xs={8} md={4} lg={2}>
-              {item}
-            </Grid>
-          )
-        })}
-
-      </Grid>
-      {/* {JSON.stringify(feed[1])} */}
-      {/* {feed && feed?.map((item,index) => {
-        return (
-          <Card
-            href={item['g:link']._text}
-            target="_blank"
-            key={index}
-          >
-            <h4>{item['g:title']._text}</h4>
-            <h5>{item['g:description']._text}</h5>
-            <h5>{item['g:link']._text}</h5>
-            <h5>{item['g:price']._text}</h5>
-            <h5>condition: {item['g:condition']._text}</h5>
-            <h5>availability: {item['g:availability']._text}</h5>
-            <h5>brand: {item['g:brand']._text}</h5>
-            <h5>age_group: {item['g:age_group']._text}</h5>
-            <h5>age_group: {item['g:age_group']._text}</h5>
-            <h5>product_type: {item['g:product_type']._text}</h5>
-          </Card>
-        )
-
-
-      })} */}
-    </Wrapper>
+    </Wrapper >
   );
 }
 
@@ -109,6 +233,20 @@ const Wrapper = styled.div`
   padding: 24px;
   /* display: flex;
   flex-direction: column; */
+  font-size: 14px;
+  .row{
+    margin: 16px 0;
+  }
+  a{
+    text-decoration: none;
+    color: black;
+  }
+
+  @media only screen and (max-width: 960px) {
+    button{
+      display: none;
+    }
+  }
 `
 const Card = styled.a`
   width: 20%;
