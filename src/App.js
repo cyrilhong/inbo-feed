@@ -1,70 +1,84 @@
 import { useEffect, useState } from 'react';
 import './App.css';
-import convert from 'xml-js';
 import styled from 'styled-components';
 import { logDOM } from '@testing-library/react';
+import React from 'react';
+import axios from 'axios';
+import Grid from '@mui/material/Grid';
 function App() {
-  const [feed, setFeed] = useState(null)
-  const [temp, setTemp] = useState(null)
+  const [feed, setFeed] = useState([])
   useEffect(() => {
     getFeed()
     // getProduct()
   }, [])
 
-  const getProduct = async () => {
-    // setIsLoading(true)
-    doCORSRequest({
-      method: 'GET',
-      url: 'https://www.inbocoffee.com/products/%E8%A1%A3%E7%B4%A2%E6%AF%94%E4%BA%9E-%E6%BD%94%E8%92%82%E6%99%AE%E9%8E%AE-%E6%B2%83%E5%8D%A1%E6%9D%91-%E8%8D%94%E6%9E%9D%E8%99%95%E7%90%86%E5%A0%B4-%E6%B0%B4%E6%B4%97g1?variation=62db6c8a5a4235000a69436a',
-      "Content-Type": "application/html; charset=utf-8"
-    }, function printResult(data) {
-      const parser = new DOMParser();
-      // console.log(data);
-      
-      const xmlDoc = parser.parseFromString(data, "text/html");
-      const docString = new XMLSerializer().serializeToString(xmlDoc);
-      const result = convert.xml2js(docString, { compact: true });
-      console.log(result);
-      
-      // setFeed(result)
-    });
-  }
+  const pickArray = [0, 2, 17, 28, 35]
 
   const getFeed = async () => {
     // setIsLoading(true)
-    doCORSRequest({
-      method: 'GET',
-      url: 'https://shopline-feeds.s3.amazonaws.com/facebook_featured_products/inbocoffee.xml',
-      "Content-Type": "application/xml; charset=utf-8"
-    }, function printResult(data) {
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(data, "text/xml");
-      const docString = new XMLSerializer().serializeToString(xmlDoc);
-      const result = convert.xml2js(docString, { compact: true }).rss.channel.item;
-      setFeed(result)
-    });
-  }
+    axios
+      .get("https://sheets.googleapis.com/v4/spreadsheets/1B11qmEYVdmbaAxCpLw-Gobodi5g8IYsps8q1H-_IIUk/values/Worksheet1?key=AIzaSyA9cxITlFQrAEGXHFPRK7-b5w2BepFcz8g", {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(data => {
+        console.log(data.data.values);
+        // debugger
+        let arr = []
+        let arrTemp1 = []
+        let arrTemp2 = []
+        const result = data.data.values
+        pickArray.map((item) => {
+          result[0].map((resultItem, index) => {
+            let arrTemp = []
+            // debugger
+            console.log({ resultItem, index, item });
 
-  const cors_api_url = 'https://cors-anywhere.herokuapp.com/';
-  function doCORSRequest(options, printResult) {
-    const x = new XMLHttpRequest();
-    x.open(options.method, cors_api_url + options.url);
-    x.onload = x.onerror = function () {
-      printResult(
-        x.responseText
-      );
-    };
-    if (/^POST/i.test(options.method)) {
-      x.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-    }
-    x.send(options.data);
-  }
+            return index === item && arrTemp1.push(resultItem)
+          })
+          result[2].map((resultItem, index) => {
 
+            // debugger
+            console.log({ resultItem, index, item });
+
+            return index === item && arrTemp2.push(resultItem)
+          })
+        })
+        arr.push(arrTemp1, arrTemp2)
+        console.log(arr);
+
+        setFeed(arr)
+      })
+      .catch(function (error) {
+        console.log(error);
+      });
+  }
   return (
     <Wrapper>
       <h1>Inbo Feed</h1>
-      {/* {JSON.stringify(feed)} */}
-      {feed && feed.map((item,index) => {
+      <Grid container spacing={4}>
+        {feed[0]?.map((item) => {
+          return (
+            <Grid item xs={8} md={4} lg={2}>
+              {item}
+            </Grid>
+          )
+        })}
+
+      </Grid>
+      <Grid container spacing={4}>
+        {feed[1]?.map((item) => {
+          return (
+            <Grid item xs={8} md={4} lg={2}>
+              {item}
+            </Grid>
+          )
+        })}
+
+      </Grid>
+      {/* {JSON.stringify(feed[1])} */}
+      {/* {feed && feed?.map((item,index) => {
         return (
           <Card
             href={item['g:link']._text}
@@ -81,13 +95,11 @@ function App() {
             <h5>age_group: {item['g:age_group']._text}</h5>
             <h5>age_group: {item['g:age_group']._text}</h5>
             <h5>product_type: {item['g:product_type']._text}</h5>
-            <img src={item['g:image_link']._text} alt="" />
-            {/* {JSON.stringify(item)} */}
           </Card>
         )
 
 
-      })}
+      })} */}
     </Wrapper>
   );
 }
@@ -99,12 +111,16 @@ const Wrapper = styled.div`
   flex-direction: column; */
 `
 const Card = styled.a`
-  /* width: 40%; */
+  width: 20%;
   color: black;
   border: 1px solid #000;
   padding: 16px;
   display: inline-block;
   margin: 0 16px 16px;
+  h5{
+    /* display: inline-block; */
+    overflow-wrap: break-word;
+  }
   h1,h2{
     text-decoration: none;
   }
