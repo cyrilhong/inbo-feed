@@ -43,7 +43,8 @@ function App() {
             amount: null,
             package: null,
             price: null,
-            country_zh: null
+            country_zh: null,
+            process: null
           }
           if (firstLevel[2] && firstLevel[38]) {
             firstLevel.map((resultItem, index) => {
@@ -77,6 +78,9 @@ function App() {
                   break;
                 case index === 38:
                   obj.price = resultItem
+                  break;
+                case index === 55:
+                  obj.process = resultItem
                   break;
                 default:
                   break;
@@ -171,10 +175,23 @@ function App() {
       {/* <Pdf targetRef={ref} filename="code-example.pdf">
         {({ toPdf }) => <button onClick={toPdf}>Generate Pdf</button>}
       </Pdf> */}
-      <Grid container >
+      <Grid container>
         {
           Object.keys(feed).map((key, index) => {
             if (isVisible(feed[key])) {
+              // 先將所有 item 根據處理方法分類
+              const processedItems = feed[key].reduce((acc, item) => {
+                const process = item.process; // 假設 process 是 item 的一個屬性
+                if (!acc[process]) {
+                  acc[process] = [];
+                }
+                // 檢查是否已經存在這個 item
+                if (!acc[process].some(existingItem => existingItem.name_eng === item.name_eng)) {
+                  acc[process].push(item);
+                }
+                return acc;
+              }, {});
+
               return (
                 <Grid key={key} item xs={12} lg={12}>
                   <div key={index}>
@@ -186,43 +203,47 @@ function App() {
                       <Grid item xs={4}>
                         <b>品項</b>
                       </Grid>
-                      <Grid item xs={8} style={{textAlign:'right', paddingRight:'16px'}}>
+                      <Grid item xs={8} style={{ textAlign: 'right', paddingRight: '16px' }}>
                         <b>價格(點選商品連結，價格內詳)</b>
                       </Grid>
                     </Grid>
-                    {feed[key]?.map(item => {
-                      if (item?.amount > 0) {
-                        return (
-                          <a href={inboLink + item?.id} key={item?.name_eng} target="_blank">
-                            <Grid key={item?.name_eng} className="row" container spacing={2}>
-                              <Grid item xs={9} >
-                                {item?.name_zh} <br />
-                                {item?.name_eng}
-                              </Grid>
-                              {/* <Grid item xs={6} md={4} lg={5}>
-                                {item?.amount}
-                              </Grid> */}
-                              <Grid item xs={3} style={{ textAlign: 'right' ,paddingRight:'16px'}}>
-                                {commaNumber(item?.price)}/KG
-                              </Grid>
-                            </Grid>
-                          </a>
-                        )
-                      } else {
-                        return
-                      }
 
-                    })}
+                    {Object.keys(processedItems).map((process) => (
+                      process ? (
+                        <div key={process}>
+                          {process !== "null" && <h2>{process}</h2>}
+                          {processedItems[process].map(item => {
+                            if (item?.amount > 0 && item?.name_zh && item?.name_eng) {
+                              return (
+                                <a href={inboLink + item?.id} key={item?.name_eng} target="_blank">
+                                  <Grid key={item?.name_eng} className="row" container spacing={2}>
+                                    <Grid item xs={9}>
+                                      {item?.name_zh} <br />
+                                      {item?.name_eng}
+                                    </Grid>
+                                    <Grid item xs={3} style={{ textAlign: 'right', paddingRight: '16px' }}>
+                                      {commaNumber(item?.price)}/KG
+                                    </Grid>
+                                  </Grid>
+                                </a>
+                              )
+                            } else {
+                              return null;
+                            }
+                          })}
+                        </div>
+                      ) : null
+                    ))}
+
                     <hr style={{ margin: '60px 0 60px' }} />
                   </div>
                 </Grid>
-              )
+              );
             } else {
-              return
+              return null;
             }
           })
         }
-
       </Grid>
     </Wrapper >
   );
